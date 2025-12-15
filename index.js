@@ -7,16 +7,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à ta base TCG PG sur Render
+// Connexion directe à ta base TCG PG (ton Internal URL)
 const pool = new Pool({
   connectionString: 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
 });
 
+// Route d'accueil pour tester si l'API est en vie
+app.get('/', (req, res) => {
+  res.json({ message: 'API Maximus TCG en ligne !' });
+});
+
 // Inscription
 app.post('/auth/register', async (req, res) => {
   const { pseudo, email, mot_de_passe } = req.body;
-  if (!pseudo || !email || !mot_de_passe) return res.status(400).json({ error: 'Tous les champs sont requis' });
+  if (!pseudo || !email || !mot_de_passe) {
+    return res.status(400).json({ error: 'Tous les champs sont requis' });
+  }
 
   const hash = await bcrypt.hash(mot_de_passe, 10);
   try {
@@ -34,6 +41,10 @@ app.post('/auth/register', async (req, res) => {
 // Connexion
 app.post('/auth/login', async (req, res) => {
   const { email, mot_de_passe } = req.body;
+  if (!email || !mot_de_passe) {
+    return res.status(400).json({ error: 'Email et mot de passe requis' });
+  }
+
   try {
     const { rows } = await pool.query('SELECT id_utilisateur, mot_de_passe FROM utilisateur WHERE email = $1', [email.toLowerCase()]);
     if (!rows[0] || !(await bcrypt.compare(mot_de_passe, rows[0].mot_de_passe))) {
