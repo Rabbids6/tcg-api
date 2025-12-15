@@ -7,34 +7,44 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Connexion à ta base TCG PG sur Render
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+  connectionString: 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
+  ssl: { rejectUnauthorized: false }
 });
 
-// Inscription (pseudo + email + mdp)
-app.post('/register', async (req, res) => {
-    const { username, email, password } = req.body;
-    const hash = await bcrypt.hash(password, 10);
-    try {
+// Inscription
+app.post('/auth/register', async (req, res) => {
+  const { pseudo, email, mot_de_passe } = req.body;
+  if (!pseudo || !email || !mot_de_passe) return res.status(400).json({ error: 'Tous les champs sont requis' });
+
+  const hash = await bcrypt.hash(mot_de_passe, 10);
+  try {
     const result = await pool.query(
-        'INSERT INTO users(username, email, password) VALUES($1, $2, $3) RETURNING id',
-        [username, email.toLowerCase(), hash]
+      'INSERT INTO utilisateur(pseudo, email, mot_de_passe) VALUES($1, $2, $3) RETURNING id_utilisateur',
+      [pseudo, email.toLowerCase(), hash]
     );
-    res.json({ success: true, userId: result.rows[0].id });
-    } catch (e) {
-        res.status(400).json({ error: 'Pseudo ou email déjà utilisé' });
-    }
+    res.json({ success: true, userId: result.rows[0].id_utilisateur });
+  } catch (e) {
+    console.error(e);
+    res.status(400).json({ error: 'Pseudo ou email déjà utilisé' });
+  }
 });
 
 // Connexion
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const { rows } = await pool.query('SELECT id, password FROM users WHERE email = $1', [email.toLowerCase()]);
-    if (!rows[0] || !(await bcrypt.compare(password, rows[0].password))) {
-        return res.status(401).json({ error: 'Mauvais identifiants' });
+app.post('/auth/login', async (req, res) => {
+  const { email, mot_de_passe } = req.body;
+  try {
+    const { rows } = await pool.query('SELECT id_utilisateur, mot_de_passe FROM utilisateur WHERE email = $1', [email.toLowerCase()]);
+    if (!rows[0] || !(await bcrypt.compare(mot_de_passe, rows[0].mot_de_passe))) {
+      return res.status(401).json({ error: 'Mauvais email ou mot de passe' });
     }
-    res.json({ success: true, userId: rows[0].id, username: rows[0].username });
+    res.json({ success: true, userId: rows[0].id_utilisateur });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`API Maximus TCG prête sur port ${PORT}`));
