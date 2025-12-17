@@ -7,7 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à ta base
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
@@ -27,7 +26,6 @@ app.post('/auth/register', async (req, res) => {
     );
     res.json({ success: true, userId: result.rows[0].id_utilisateur });
   } catch (e) {
-    console.error(e);
     res.status(400).json({ error: 'Pseudo ou email déjà utilisé' });
   }
 });
@@ -41,7 +39,6 @@ app.post('/auth/login', async (req, res) => {
     }
     res.json({ success: true, userId: rows[0].id_utilisateur });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -54,7 +51,6 @@ app.get('/api/collection', async (req, res) => {
     const { rows } = await pool.query('SELECT id_carte AS carte_id, quantite FROM carte_utilisateur WHERE id_utilisateur = $1', [userId]);
     res.json(rows);
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: 'Erreur chargement inventaire' });
   }
 });
@@ -65,14 +61,12 @@ app.post('/api/unlock', async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO carte_utilisateur (id_utilisateur, id_carte, quantite)
-       VALUES ($1, $2, 1)
-       ON CONFLICT (id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1`,
+      `INSERT INTO carte_utilisateur(id_utilisateur, id_carte, quantite) VALUES($1, $2, 1)
+       ON CONFLICT(id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1`,
       [userId, carteId]
     );
     res.json({ success: true });
   } catch (e) {
-    console.error('Erreur ajout carte :', e);
     res.status(500).json({ error: 'Erreur ajout carte' });
   }
 });
