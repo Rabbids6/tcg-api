@@ -73,3 +73,30 @@ app.post('/api/unlock', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API prête sur port ${PORT}`));
+
+
+app.post('/api/unlock', async (req, res) => {
+  const { userId, carteId } = req.body;
+  console.log('Tentative unlock : userId =', userId, 'carteId =', carteId);
+
+  if (!userId || !carteId) {
+    return res.status(400).json({ error: 'userId et carteId requis' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO carte_utilisateur (id_utilisateur, id_carte, quantite)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1
+       RETURNING *`,
+      [userId, carteId]
+    );
+    console.log('Succès :', result.rows[0]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Erreur SQL unlock :', e.message);
+    console.error('Détail erreur :', e);
+    res.status(500).json({ error: 'Erreur ajout carte', detail: e.message });
+  }
+});
+
