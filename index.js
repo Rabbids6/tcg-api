@@ -7,13 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion directe à ta base TCG PG (ton Internal URL)
+// Connexion à ta base TCG PG sur Render
 const pool = new Pool({
   connectionString: 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
 });
 
-// Route d'accueil pour tester si l'API est en vie
+// Route d'accueil pour tester l'API
 app.get('/', (req, res) => {
   res.json({ message: 'API Maximus TCG en ligne !' });
 });
@@ -54,6 +54,41 @@ app.post('/auth/login', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Nouvelle route : charger l'inventaire (collection de cartes)
+app.get('/api/collection', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: 'userId requis' });
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id_carte AS carte_id, quantite FROM carte_utilisateur WHERE id_utilisateur = $1',
+      [userId]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur chargement inventaire' });
+  }
+});
+
+// Nouvelle route : débloquer une carte (ajouter ou incrémenter)
+app.post('/api/unlock', async (req, res) => {
+  const { userId, carteId } = req.body;
+  if (!userId || !carteId) return res.status(400).json({ error: 'userId et carteId requis' });
+
+  try {
+    await pool.query(
+      `INSERT INTO carte_utilisateur(id_utilisateur, id_carte, quantite) VALUES($1, $2, 1)
+       ON CONFLICT(id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1`,
+      [userId, carteId]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur ajout carte' });
   }
 });
 
