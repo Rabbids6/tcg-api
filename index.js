@@ -7,18 +7,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à ta base PostgreSQL
+// Connexion à ta base
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
 });
 
-// Test de l'API
-app.get('/', (req, res) => {
-  res.json({ message: 'API Maximus TCG en ligne !' });
-});
+app.get('/', (req, res) => res.json({ message: 'API Maximus TCG en ligne !' }));
 
-// Inscription
 app.post('/auth/register', async (req, res) => {
   const { pseudo, email, mot_de_passe } = req.body;
   if (!pseudo || !email || !mot_de_passe) return res.status(400).json({ error: 'Champs manquants' });
@@ -36,7 +32,6 @@ app.post('/auth/register', async (req, res) => {
   }
 });
 
-// Connexion
 app.post('/auth/login', async (req, res) => {
   const { email, mot_de_passe } = req.body;
   try {
@@ -51,7 +46,6 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-// Charger l'inventaire
 app.get('/api/collection', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: 'userId requis' });
@@ -65,12 +59,9 @@ app.get('/api/collection', async (req, res) => {
   }
 });
 
-// AJOUT DE CARTE DANS LA BASE (la route qui manquait)
 app.post('/api/unlock', async (req, res) => {
   const { userId, carteId } = req.body;
-  if (!userId || !carteId) {
-    return res.status(400).json({ error: 'userId et carteId requis' });
-  }
+  if (!userId || !carteId) return res.status(400).json({ error: 'userId et carteId requis' });
 
   try {
     await pool.query(
@@ -82,11 +73,9 @@ app.post('/api/unlock', async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     console.error('Erreur ajout carte :', e);
-    res.status(500).json({ error: 'Erreur base de données' });
+    res.status(500).json({ error: 'Erreur ajout carte' });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`API Maximus TCG en ligne sur le port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`API prête sur port ${PORT}`));
