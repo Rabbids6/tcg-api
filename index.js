@@ -7,16 +7,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à ta base PostgreSQL sur Render
+// Connexion à ta base
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
 });
 
 // Test API
-app.get('/', (req, res) => {
-  res.json({ message: 'API Maximus TCG en ligne !' });
-});
+app.get('/', (req, res) => res.json({ message: 'API Maximus TCG en ligne !' }));
 
 // Inscription
 app.post('/auth/register', async (req, res) => {
@@ -65,7 +63,7 @@ app.get('/api/collection', async (req, res) => {
   }
 });
 
-// Débloquer une carte (ajoute ou incrémente)
+// Débloquer une carte
 app.post('/api/unlock', async (req, res) => {
   const { userId, carteId } = req.body;
   if (!userId || !carteId) return res.status(400).json({ error: 'userId et carteId requis' });
