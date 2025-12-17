@@ -7,14 +7,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connexion à ta base
+// Connexion à ta base PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://tcg_pg_user:z0rgTFh1t7vgtUcyZyveWvVRGDdTq2EZ@dpg-d4i3fl9r0fns73ajbep0-a/tcg_pg',
   ssl: { rejectUnauthorized: false }
 });
 
-// Test API
-app.get('/', (req, res) => res.json({ message: 'API Maximus TCG en ligne !' }));
+// Test de l'API
+app.get('/', (req, res) => {
+  res.json({ message: 'API Maximus TCG en ligne !' });
+});
 
 // Inscription
 app.post('/auth/register', async (req, res) => {
@@ -63,23 +65,28 @@ app.get('/api/collection', async (req, res) => {
   }
 });
 
-// Débloquer une carte
+// AJOUT DE CARTE DANS LA BASE (la route qui manquait)
 app.post('/api/unlock', async (req, res) => {
   const { userId, carteId } = req.body;
-  if (!userId || !carteId) return res.status(400).json({ error: 'userId et carteId requis' });
+  if (!userId || !carteId) {
+    return res.status(400).json({ error: 'userId et carteId requis' });
+  }
 
   try {
     await pool.query(
-      `INSERT INTO carte_utilisateur(id_utilisateur, id_carte, quantite) VALUES($1, $2, 1)
-       ON CONFLICT(id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1`,
+      `INSERT INTO carte_utilisateur (id_utilisateur, id_carte, quantite)
+       VALUES ($1, $2, 1)
+       ON CONFLICT (id_utilisateur, id_carte) DO UPDATE SET quantite = carte_utilisateur.quantite + 1`,
       [userId, carteId]
     );
     res.json({ success: true });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Erreur ajout carte' });
+    console.error('Erreur ajout carte :', e);
+    res.status(500).json({ error: 'Erreur base de données' });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API Maximus TCG prête sur port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`API Maximus TCG en ligne sur le port ${PORT}`);
+});
